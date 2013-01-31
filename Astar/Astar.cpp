@@ -30,7 +30,7 @@ bool Astar::run()
                     mPath.push_back(currentPoint);
                     foundValidDir = true;
                     success = true;
-                } else if (mGrid[currentPoint.first][currentPoint.second].value == empty && !closed(currentPoint)) { // path
+                } else if (isFreeCell(currentPoint) && !isClosed(currentPoint)) { // path
                     mPath.push_back(currentPoint);
                     mGrid[currentPoint.first][currentPoint.second].closed = true;
                     foundValidDir = true;
@@ -82,7 +82,7 @@ vector<pair<int, int> > Astar::getPath()
     return mPath;
 }
 
-bool Astar::isPositionValid(pair<int, int> pos)
+bool Astar::isPositionValid(pair<int, int> pos) const
 {
     int x = pos.first;
     int y = pos.second;
@@ -101,7 +101,12 @@ void Astar::setEmptyValue(int value)
     empty = value;
 }
 
-bool Astar::closed(pair<int, int> pos)
+bool Astar::isClosed(pair<int, int> pos) const
 {
     return mGrid[pos.first][pos.second].closed;
+}
+
+bool Astar::isFreeCell(pair<int, int> pos) const
+{
+    return mGrid[pos.first][pos.second].value == empty;
 }
