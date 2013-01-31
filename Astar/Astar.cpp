@@ -9,6 +9,10 @@ Astar::Astar() : empty(0), mStart(0, 0), mEnd(0, 0)
 
 bool Astar::run()
 {
+    if (!isGridValid() || !isFreeCell(mStart) || !isFreeCell(mEnd) || !isPositionValid(mStart) || !isPositionValid(mEnd)) {
+        return false;
+    }
+    
     mPath.resize(0);
     
     mPath.push_back(mStart);
@@ -79,6 +83,22 @@ void Astar::setGrid(vector<vector<int> > grid)
 vector<pair<int, int> > Astar::getPath()
 {
     return mPath;
+}
+
+bool Astar::isGridValid() const
+{
+    if (mGrid.empty() || mGrid.front().empty()) {
+        return false;
+    }
+    
+    unsigned int expectedSize = mGrid.front().size();
+    for (int i = 0; i < mGrid.size(); i++) {
+        if (mGrid[i].size() != expectedSize) {
+            return false;
+        }
+    }
+    
+    return true;
 }
 
 bool Astar::isPositionValid(pair<int, int> pos) const

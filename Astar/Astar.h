@@ -36,6 +36,7 @@ protected:
     bool isPositionValid(pair<int, int>) const;
     bool isClosed(pair<int, int>) const;
     bool isFreeCell(pair<int, int>) const;
+    bool isGridValid() const;
     
     vector<vector<Cell> > mGrid; // working grid
     vector<pair<int, int> > mDirections; // directions available from a given point
