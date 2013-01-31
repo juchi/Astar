@@ -26,14 +26,13 @@ bool Astar::run()
             currentPoint.second = mPath.back().second + (*itDir).second;
             
             if (isPositionValid(currentPoint)) {
-                if (currentPoint == mEnd) { // success
-                    mPath.push_back(currentPoint);
-                    foundValidDir = true;
-                    success = true;
-                } else if (isFreeCell(currentPoint) && !isClosed(currentPoint)) { // path
+                if (isFreeCell(currentPoint) && !isClosed(currentPoint)) { // the cell can be explored
                     mPath.push_back(currentPoint);
                     mGrid[currentPoint.first][currentPoint.second].closed = true;
                     foundValidDir = true;
+                    if (currentPoint == mEnd) { // success
+                        success = true;
+                    }
                 }
             }
         }
