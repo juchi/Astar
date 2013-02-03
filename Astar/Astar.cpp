@@ -3,6 +3,62 @@
 
 using namespace std;
 
+Cell::Cell(int cost) : open(false), closed(false), mParent(0), mCost(cost)
+{
+}
+
+bool Cell::isWalkable()
+{
+    return !closed && mCost > 0;
+}
+
+void Cell::setFullCost(int cost)
+{
+    fullCost = cost;
+    estimate = heuristic + fullCost;
+}
+
+int Cell::getFullCost() const
+{
+    return fullCost;
+}
+
+int Cell::getCost() const
+{
+    return mCost;
+}
+
+void Cell::setCoords(int x, int y)
+{
+    mCoords.first = x;
+    mCoords.second = y;
+}
+
+pair<int, int> Cell::getCoords() const
+{
+    return mCoords;
+}
+
+void Cell::setHeuristic(int value)
+{
+    heuristic = value;
+}
+
+int Cell::getEstimate() const
+{
+    return estimate;
+}
+
+void Cell::setParent(Cell* parent)
+{
+    mParent = parent;
+}
+
+Cell* Cell::getParent()
+{
+    return mParent;
+}
+
 Astar::Astar() : empty(0), mStart(0, 0), mEnd(0, 0)
 {
 }
@@ -14,36 +70,53 @@ bool Astar::run()
     }
     
     mPath.resize(0);
+    mGrid[mStart.first][mStart.second]->open = true;
+    mOpenList.insert(pair<int, Cell*>(0, mGrid[mStart.first][mStart.second]));
     
-    mPath.push_back(mStart);
-    pair<int, int> currentPoint = mStart;
-    
-    vector<pair<int, int> >::iterator itDir;
-    
-    bool foundValidDir = false;
-    bool success = false;
-    
-    while (!success) {
-        foundValidDir = false;
-        for (itDir = mDirections.begin(); !foundValidDir && itDir < mDirections.end(); itDir++) {
-            currentPoint.first = mPath.back().first + (*itDir).first;
-            currentPoint.second = mPath.back().second + (*itDir).second;
-            
-            if (isPositionValid(currentPoint)) {
-                if (isFreeCell(currentPoint) && !isClosed(currentPoint)) { // the cell can be explored
-                    mPath.push_back(currentPoint);
-                    mGrid[currentPoint.first][currentPoint.second].closed = true;
-                    foundValidDir = true;
-                    if (currentPoint == mEnd) { // success
-                        success = true;
-                    }
+    while (true) {
+        
+        if (mOpenList.empty()) {
+            return false; // no path available
+        }
+        
+        // get the node with best estimated value
+        multimap<int, Cell*>::iterator front = mOpenList.begin();
+        Cell* currentNode = (*front).second;
+        mOpenList.erase(front);
+        currentNode->closed = true;
+        currentNode->open = false;
+        
+        if (isFinalNode(currentNode)) {
+            buildFinalPath(currentNode);
+            break;
+        }
+        
+        // browse and process surrounding nodes
+        vector<Cell*> nodes = getSurroundings(currentNode);
+        vector<Cell*>::iterator it;
+        for (it = nodes.begin(); it < nodes.end(); it++) {
+            Cell* node = (*it);
+            if (node->isWalkable()) {
+                if (!node->open) { // add to open list
+                    node->open = true;
+                    node->setParent(currentNode);
+                    node->setFullCost(currentNode->getCost() + node->getCost());
+                    node->setHeuristic(getCellHeuristic(node));
+                    mOpenList.insert(pair<int, Cell*>(node->getEstimate(), node));
+                } else if (node->getFullCost() > currentNode->getCost() + node->getCost()) { // recalculate path to node
+                    node->setParent(currentNode);
+                    node->setFullCost(currentNode->getCost() + node->getCost());
                 }
             }
         }
-        if (!foundValidDir) {
-            mPath.pop_back();
-            if (mPath.empty()) {
-                return false;
+        
+        // reorder the open list
+        multimap<int, Cell*>::iterator mapIt;
+        for (mapIt = mOpenList.begin(); mapIt != mOpenList.end(); mapIt++) {
+            Cell* node = (*mapIt).second;
+            if (node->getFullCost() != (*mapIt).first) {
+                mOpenList.insert(pair<int, Cell*>(node->getEstimate(), node));
+                mapIt = mOpenList.erase(mapIt); // requires c++11 support
             }
         }
     }
@@ -69,14 +142,65 @@ void Astar::setGrid(vector<vector<int> > grid)
 {
     mGrid.clear();
     mGrid.resize(grid.size());
+    int cost = 0;
     for (int x = 0; x < grid.size(); x++) {
         mGrid[x].clear();
         for (int y = 0; y < grid[x].size(); y++) {
-            Cell cell;
-            cell.closed = false;
-            cell.value = grid[x][y];
+            if (grid[x][y] == empty) {
+                cost = 10;
+            } else {
+                cost = 0;
+            }
+            Cell* cell = new Cell(cost);
+            cell->setCoords(x, y);
+            cell->value = grid[x][y];
             mGrid[x].push_back(cell);
         }
+    }
+}
+
+vector<Cell*> Astar::getSurroundings(Cell * cell)
+{
+    pair<int, int> coords = cell->getCoords();
+    int x = coords.first;
+    int y = coords.second;
+    
+    Cell* neighbour;
+    vector<Cell*> cells;
+    vector<pair<int, int> >::iterator itDir;
+    
+    for (itDir = mDirections.begin(); itDir < mDirections.end(); itDir++) {
+        pair<int, int> pos (x + itDir->first, y + itDir->second);
+        if (isPositionValid(pos)) {
+            neighbour = mGrid[pos.first][pos.second];
+            cells.push_back(neighbour);
+        }
+    }
+    
+    return cells;
+}
+
+int Astar::getCellHeuristic(Cell* cell)
+{
+    int x = abs(cell->getCoords().first - mEnd.first);
+    int y = abs(cell->getCoords().second - mEnd.second);
+    
+    return x + y;
+}
+
+void Astar::buildFinalPath(Cell* finalCell)
+{
+    Cell* cell = finalCell;
+    vector<pair<int, int> > tmp;
+    while (cell) {
+        tmp.push_back(cell->getCoords());
+        cell = cell->getParent();
+    }
+    
+    // flip the result
+    vector<pair<int, int> >::reverse_iterator it;
+    for (it = tmp.rbegin(); it < tmp.rend(); it++) {
+        mPath.push_back(*it);
     }
 }
 
@@ -122,10 +246,15 @@ void Astar::setEmptyValue(int value)
 
 bool Astar::isClosed(pair<int, int> pos) const
 {
-    return mGrid[pos.first][pos.second].closed;
+    return mGrid[pos.first][pos.second]->closed;
 }
 
 bool Astar::isFreeCell(pair<int, int> pos) const
 {
-    return mGrid[pos.first][pos.second].value == empty;
+    return mGrid[pos.first][pos.second]->value == empty;
+}
+
+bool Astar::isFinalNode(Cell* cell) const
+{
+    return cell->getCoords() == mEnd;
 }
