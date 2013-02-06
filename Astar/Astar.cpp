@@ -65,7 +65,7 @@ Astar::Astar() : empty(0), mStart(0, 0), mEnd(0, 0)
 
 bool Astar::run()
 {
-    if (!isGridValid() || !isFreeCell(mStart) || !isFreeCell(mEnd) || !isPositionValid(mStart) || !isPositionValid(mEnd)) {
+    if (!isGridValid() || !isPositionValid(mStart) || !isPositionValid(mEnd) || !isFreeCell(mStart) || !isFreeCell(mEnd)) {
         return false;
     }
     
