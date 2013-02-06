@@ -27,10 +27,10 @@ public:
     
     int value;
     
-    bool closed = false;
-    bool open = false;
+    bool closed;
+    bool open;
 private:
-    Cell* mParent = 0;
+    Cell* mParent;
     
     int mCost; // cost for going through this cell, 0 for non-crossable cell
     int estimate; // estimated distance + cost
